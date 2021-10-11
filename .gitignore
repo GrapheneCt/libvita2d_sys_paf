@@ -1,0 +1,14 @@
+*.a
+*.o
+*.elf
+*.velf
+
+# VDS
+*.vs
+build
+eboot.bin
+eboot2.bin
+param.sfo
+param2.sfo
+PSVita_Debug
+PSVita_Release
