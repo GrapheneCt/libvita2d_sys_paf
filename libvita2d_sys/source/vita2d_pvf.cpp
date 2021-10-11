@@ -7,8 +7,6 @@
 #include "texture_atlas.h"
 #include "bin_packing_2d.h"
 #include "utils.h"
-#include "shared.h"
-#include "heap.h"
 
 #define ATLAS_DEFAULT_W 512
 #define ATLAS_DEFAULT_H 512

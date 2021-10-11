@@ -49,6 +49,17 @@ namespace vita2d {
 			SceUInt32 color;
 		};
 
+		class TextureVertex
+		{
+		public:
+
+			SceFloat x;
+			SceFloat y;
+			SceFloat z;
+			SceFloat u;
+			SceFloat v;
+		};
+
 		Core(SceUInt32 v2dTempPoolSize = 1 * 1024 * 1024, SceUInt32 width = 960, SceUInt32 height = 544);
 
 		~Core();
@@ -95,15 +106,11 @@ namespace vita2d {
 		SceGxmMultisampleMode msaa;
 		SceUInt32 screenWidth;
 		SceUInt32 screenHeight;
-
 		SceGxmShaderPatcherId colorVertexProgramId;
 		SceGxmShaderPatcherId colorFragmentProgramId;
-
 		FragmentPrograms fragmentProgramsList;
-
 		ScePVoid linearIndicesMem;
 		ScePVoid poolMem;
-
 		SceUInt32 poolIndex;
 	};
 
@@ -121,6 +128,39 @@ namespace vita2d {
 		static SceVoid Circle(SceFloat x, SceFloat y, SceFloat radius, SceUInt32 color);
 
 		static SceVoid Array(SceGxmPrimitiveType mode, const Core::ColorVertex *vertices, SceSize count);
+	};
+
+	class Texture
+	{
+	public:
+
+		Texture(SceUInt32 w, SceUInt32 h, SceGxmTextureFormat format = SCE_GXM_TEXTURE_FORMAT_A8B8G8R8, SceBool isRenderTarget = SCE_FALSE);
+
+		~Texture();
+
+		static SceVoid SetHeapType(paf::graphics::MemoryPool::MemoryType type);
+
+		static paf::graphics::MemoryPool::MemoryType GetHeapType();
+
+		SceVoid SetFilters(SceGxmTextureFilter min_filter, SceGxmTextureFilter mag_filter);
+
+		SceVoid Draw(SceFloat x, SceFloat y, SceFloat tex_x, SceFloat tex_y, SceFloat tex_w, SceFloat tex_h, SceFloat x_scale, SceFloat y_scale, SceUInt32 color);
+
+	private:
+
+		static SceInt32 TexFormat2Bytespp(SceGxmTextureFormat format);
+
+		SceVoid Draw(SceFloat x, SceFloat y, SceFloat tex_x, SceFloat tex_y, SceFloat tex_w, SceFloat tex_h, SceFloat x_scale, SceFloat y_scale);
+
+		ScePVoid dataMem;
+		ScePVoid paletteMem;
+		ScePVoid depthMem;
+		SceGxmTexture gxmTex;
+		SceGxmColorSurface gxmSfc;
+		SceGxmDepthStencilSurface gxmSfd;
+		SceGxmRenderTarget *gxmRtgt;
+		graphics::MemoryPool::MemoryType texHeapType;
+
 	};
 
 	class Pvf

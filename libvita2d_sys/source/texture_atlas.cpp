@@ -1,15 +1,14 @@
 #include <kernel.h>
-#include <libdbg.h>
-#include "texture_atlas.h"
-#include "heap.h"
+#include <paf.h>
 
-extern void* vita2d_heap_internal;
+#include "texture_atlas.h"
+#include "int_htab.h"
 
 texture_atlas *texture_atlas_create(int width, int height, SceGxmTextureFormat format)
 {
-	texture_atlas *atlas = heap_alloc_heap_memory(vita2d_heap_internal, sizeof(*atlas));
+	texture_atlas *atlas = sce_paf_malloc(sizeof(texture_atlas));
 	if (!atlas) {
-		SCE_DBG_LOG_ERROR("[ATLAS] heap_alloc_heap_memory() returned NULL");
+		sceClibPrintf("[ATLAS] sce_paf_malloc() returned NULL");
 		return NULL;
 	}
 

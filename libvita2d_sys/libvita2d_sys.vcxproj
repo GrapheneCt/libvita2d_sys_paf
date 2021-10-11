@@ -46,6 +46,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <AdditionalIncludeDirectories>$(ProjectDir)include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <CppLanguageStd>Cpp03</CppLanguageStd>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|PSVita'">
@@ -65,12 +66,18 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="source\bin_packing_2d.c" />
+    <ClCompile Include="source\int_htab.c" />
+    <ClCompile Include="source\texture_atlas.cpp" />
     <ClCompile Include="source\vita2d_pvf.cpp" />
+    <ClCompile Include="source\vita2d_texture.cpp" />
     <None Include="source\utils.cpp" />
     <ClCompile Include="source\vita2d.cpp" />
     <ClCompile Include="source\vita2d_draw.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="include\bin_packing_2d.h" />
+    <ClInclude Include="include\int_htab.h" />
     <ClInclude Include="include\shader\compiled\clear_f_gxp.h" />
     <ClInclude Include="include\shader\compiled\clear_v_gxp.h" />
     <ClInclude Include="include\shader\compiled\color_f_gxp.h" />
@@ -78,7 +85,8 @@
     <ClInclude Include="include\shader\compiled\texture_f_gxp.h" />
     <ClInclude Include="include\shader\compiled\texture_tint_f_gxp.h" />
     <ClInclude Include="include\shader\compiled\texture_v_gxp.h" />
-    <None Include="include\utils.h" />
+    <ClInclude Include="include\utils.h" />
+    <ClInclude Include="include\texture_atlas.h" />
     <ClInclude Include="include\vita2d_sys.h" />
   </ItemGroup>
   <Import Condition="'$(ConfigurationType)' == 'Makefile' and Exists('$(VCTargetsPath)\Platforms\$(Platform)\SCE.Makefile.$(Platform).targets')" Project="$(VCTargetsPath)\Platforms\$(Platform)\SCE.Makefile.$(Platform).targets" />

@@ -1,16 +1,14 @@
 #include <stddef.h>
 #include <kernel.h>
-#include <libdbg.h>
-#include "bin_packing_2d.h"
-#include "heap.h"
+#include <paf/stdc.h>
 
-extern void* vita2d_heap_internal;
+#include "bin_packing_2d.h"
 
 bp2d_node *bp2d_create(const bp2d_rectangle *rect)
 {
-	bp2d_node *node = heap_alloc_heap_memory(vita2d_heap_internal, sizeof(*node));
+	bp2d_node *node = sce_paf_malloc(sizeof(bp2d_node));
 	if (!node) {
-		SCE_DBG_LOG_ERROR("[BP2D] heap_alloc_heap_memory() returned NULL");
+		sceClibPrintf("[BP2D] sce_paf_malloc() returned NULL");
 		return NULL;
 	}
 
@@ -34,7 +32,7 @@ void bp2d_free(bp2d_node *node)
 		if (node->right) {
 			bp2d_free(node->right);
 		}
-		heap_free_heap_memory(vita2d_heap_internal, node);
+		sce_paf_free(node);
 	}
 }
 
