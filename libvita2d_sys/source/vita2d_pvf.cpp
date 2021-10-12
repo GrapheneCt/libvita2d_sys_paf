@@ -2,9 +2,9 @@
 #include <kernel.h>
 #include <libdbg.h>
 #include <paf.h>
-#include "vita2d_sys.h"
+#include <ces.h>
 
-#include "texture_atlas.h"
+#include "vita2d_sys.h"
 #include "bin_packing_2d.h"
 #include "utils.h"
 
@@ -15,25 +15,21 @@
 
 using namespace paf;
 
-extern void* vita2d_heap_internal;
-
-typedef struct vita2d_pvf_font_handle {
-	ScePvf_t_fontId font_handle;
-	int (*in_font_group)(unsigned int c);
-	struct vita2d_pvf_font_handle *next;
-} vita2d_pvf_font_handle;
-
-typedef struct vita2d_pvf {
-	ScePvf_t_fontId lib_handle;
-	vita2d_pvf_font_handle *font_handle_list;
-	texture_atlas *atlas;
-	SceKernelLwMutexWork mutex;
-	float vsize;
-	float pr_linespace;
-	float pr_charspace;
-	float x_corr;
-	float y_corr;
-} vita2d_pvf;
+SceInt32 vita2d::Pvf::Utf8ToUcs2(const char *utf8, SceUInt32 *character)
+{
+	if (((utf8[0] & 0xF0) == 0xE0) && ((utf8[1] & 0xC0) == 0x80) && ((utf8[2] & 0xC0) == 0x80)) {
+		*character = ((utf8[0] & 0x0F) << 12) | ((utf8[1] & 0x3F) << 6) | (utf8[2] & 0x3F);
+		return 3;
+	}
+	else if (((utf8[0] & 0xE0) == 0xC0) && ((utf8[1] & 0xC0) == 0x80)) {
+		*character = ((utf8[0] & 0x1F) << 6) | (utf8[1] & 0x3F);
+		return 2;
+	}
+	else {
+		*character = utf8[0];
+		return 1;
+	}
+}
 
 vita2d::Pvf::Pvf(const char *path, SceFloat hSize, SceFloat vSize, ScePvfDataAccessMode accessMode)
 {
@@ -41,6 +37,9 @@ vita2d::Pvf::Pvf(const char *path, SceFloat hSize, SceFloat vSize, ScePvfDataAcc
 	ScePvf_t_irect irectinfo;
 	ScePVoid tempPtr = &widget::Widget::s_widget19999DA5;
 	libHandle = *(ScePvf_t_libId *)(tempPtr + 0x108);
+
+	tempPtr = &widget::Widget::s_widget91871D2D;
+	mutex = (thread::Mutex2 *)(tempPtr + 0x1F24);
 
 	vsize = 0.0f;
 	prLinespace = 0.0f;
@@ -58,9 +57,7 @@ vita2d::Pvf::Pvf(const char *path, SceFloat hSize, SceFloat vSize, ScePvfDataAcc
 	scePvfGetCharImageRect(fontHandle, 0x0057, &irectinfo);
 	vsize = irectinfo.height;
 
-	atlas = texture_atlas_create(ATLAS_DEFAULT_W, ATLAS_DEFAULT_H, SCE_GXM_TEXTURE_FORMAT_U8_R111);
-
-	mutex = new thread::Mutex("vita2d::PvfMutex", SCE_TRUE);
+	atlas = new TextureAtlas(ATLAS_DEFAULT_W, ATLAS_DEFAULT_H, SCE_GXM_TEXTURE_FORMAT_U8_R111);
 }
 
 vita2d::Pvf::Pvf(ScePVoid buf, SceSize bufSize, SceFloat hSize, SceFloat vSize)
@@ -69,6 +66,9 @@ vita2d::Pvf::Pvf(ScePVoid buf, SceSize bufSize, SceFloat hSize, SceFloat vSize)
 	ScePvf_t_irect irectinfo;
 	ScePVoid tempPtr = &widget::Widget::s_widget19999DA5;
 	libHandle = *(ScePvf_t_libId *)(tempPtr + 0x108);
+
+	tempPtr = &widget::Widget::s_widget91871D2D;
+	mutex = *(thread::Mutex2 **)(tempPtr + 0x1F24);
 
 	vsize = 0.0f;
 	prLinespace = 0.0f;
@@ -86,25 +86,21 @@ vita2d::Pvf::Pvf(ScePVoid buf, SceSize bufSize, SceFloat hSize, SceFloat vSize)
 	scePvfGetCharImageRect(fontHandle, 0x0057, &irectinfo);
 	vsize = irectinfo.height;
 
-	atlas = texture_atlas_create(ATLAS_DEFAULT_W, ATLAS_DEFAULT_H, SCE_GXM_TEXTURE_FORMAT_U8_R111);
-
-	mutex = new thread::Mutex("vita2d::PvfMutex", SCE_TRUE);
+	atlas = new TextureAtlas(ATLAS_DEFAULT_W, ATLAS_DEFAULT_H, SCE_GXM_TEXTURE_FORMAT_U8_R111);
 }
 
 vita2d::Pvf::~Pvf()
 {
-	delete mutex;
 	scePvfClose(fontHandle);
-	texture_atlas_free(atlas);
+	delete atlas;
 }
 
-SceInt32 vita2d::Pvf::AtlasAddGlyph(unsigned int character)
+SceInt32 vita2d::Pvf::AtlasAddGlyph(SceUInt32 character)
 {
 	ScePvf_t_charInfo char_info;
 	ScePvf_t_irect char_image_rect;
 	bp2d_position position;
-	ScePVoid texture_data;
-	vita2d_texture *tex = font->atlas->texture;
+	Texture *tex = atlas->texture;
 
 	if (scePvfGetCharInfo(fontHandle, character, &char_info) < 0)
 		return 0;
@@ -117,7 +113,7 @@ SceInt32 vita2d::Pvf::AtlasAddGlyph(unsigned int character)
 		char_image_rect.height + 2 * PVF_GLYPH_MARGIN
 	};
 
-	texture_atlas_entry_data data = {
+	TextureAtlas::EntryData data = {
 		char_info.glyphMetrics.horizontalBearingX64 >> 6,
 		char_info.glyphMetrics.horizontalBearingY64 >> 6,
 		char_info.glyphMetrics.horizontalAdvance64,
@@ -125,21 +121,19 @@ SceInt32 vita2d::Pvf::AtlasAddGlyph(unsigned int character)
 		0
 	};
 
-	if (!texture_atlas_insert(atlas, character, &size, &data,
+	if (!atlas->Insert(character, &size, &data,
 		&position))
 		return 0;
-
-	texture_data = vita2d_texture_get_datap(tex);
 
 	ScePvf_t_userImageBufferRec glyph_image;
 	glyph_image.pixelFormat = SCE_PVF_USERIMAGE_DIRECT8;
 	glyph_image.xPos64 = ((position.x + PVF_GLYPH_MARGIN) << 6) - char_info.glyphMetrics.horizontalBearingX64;
 	glyph_image.yPos64 = ((position.y + PVF_GLYPH_MARGIN) << 6) + char_info.glyphMetrics.horizontalBearingY64;
-	glyph_image.rect.width = vita2d_texture_get_width(tex);
-	glyph_image.rect.height = vita2d_texture_get_height(tex);
-	glyph_image.bytesPerLine = vita2d_texture_get_stride(tex);
+	glyph_image.rect.width = sceGxmTextureGetWidth(&tex->gxmTex);
+	glyph_image.rect.height = sceGxmTextureGetHeight(&tex->gxmTex);
+	glyph_image.bytesPerLine = sceGxmTextureGetWidth(&tex->gxmTex);
 	glyph_image.reserved = 0;
-	glyph_image.buffer = (ScePvf_t_u8 *)texture_data;
+	glyph_image.buffer = (ScePvf_t_u8 *)sceGxmTextureGetData(&tex->gxmTex);
 
 	return scePvfGetCharGlyphImage(fontHandle, character, &glyph_image) == 0;
 }
@@ -151,19 +145,20 @@ SceInt32 vita2d::Pvf::Draw(SceBool draw, SceInt32 *height,
 	mutex->Lock();
 
 	SceInt32 i;
+	SceUInt32 len = 0;
 	SceUInt32 character;
 	bp2d_rectangle rect;
-	texture_atlas_entry_data data;
+	TextureAtlas::EntryData data;
 	ScePvf_t_kerningInfo kerning_info;
 	SceUInt32 old_character = 0;
-	vita2d_texture *tex = font->atlas->texture;
+	Texture *tex = atlas->texture;
 	SceFloat start_x = x;
 	SceFloat max_x = 0;
 	SceFloat pen_x = x;
 	SceFloat pen_y = y;
 
 	for (i = 0; text[i];) {
-		i += utf8_to_ucs2(&text[i], &character);
+		i += Utf8ToUcs2(&text[i], &character);
 
 		if (character == '\n') {
 			if (pen_x > max_x)
@@ -173,11 +168,11 @@ SceInt32 vita2d::Pvf::Draw(SceBool draw, SceInt32 *height,
 			continue;
 		}
 
-		if (!texture_atlas_get(atlas, character, &rect, &data)) {
-			if (!atlas_add_glyph(character))
+		if (!atlas->Get(character, &rect, &data)) {
+			if (!AtlasAddGlyph(character))
 				continue;
 
-			if (!texture_atlas_get(atlas, character,
+			if (!atlas->Get(character,
 				&rect, &data))
 				continue;
 		}
@@ -190,7 +185,7 @@ SceInt32 vita2d::Pvf::Draw(SceBool draw, SceInt32 *height,
 		}
 
 		if (draw) {
-			vita2d_draw_texture_tint_part_scale(tex,
+			tex->Draw(
 				pen_x + data.bitmap_left * scale,
 				pen_y - data.bitmap_top * scale,
 				rect.x + PVF_GLYPH_MARGIN / 2.0f, (rect.y + PVF_GLYPH_MARGIN / 2.0f) - yCorr,

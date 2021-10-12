@@ -16,6 +16,9 @@
 
 #include "shader/compiled/color_v_gxp.h"
 #include "shader/compiled/color_f_gxp.h"
+#include "shader/compiled/texture_v_gxp.h"
+//#include "shader/compiled/texture_f_gxp.h"
+#include "shader/compiled/texture_tint_f_gxp.h"
 
 /* Defines */
 
@@ -31,6 +34,9 @@ static Core *s_currentCore = SCE_NULL;
 
 static const SceGxmProgram *const colorVertexProgramGxp = (const SceGxmProgram*)color_v_gxp;
 static const SceGxmProgram *const colorFragmentProgramGxp = (const SceGxmProgram*)color_f_gxp;
+static const SceGxmProgram *const textureVertexProgramGxp = (const SceGxmProgram*)texture_v_gxp;
+//static const SceGxmProgram *const textureFragmentProgramGxp = (const SceGxmProgram*)texture_f_gxp;
+static const SceGxmProgram *const textureTintFragmentProgramGxp = (const SceGxmProgram*)texture_tint_f_gxp;
 
 vita2d::Core::Core(SceUInt32 v2dTempPoolSize, SceUInt32 width, SceUInt32 height)
 {
@@ -59,30 +65,37 @@ vita2d::Core::~Core()
 
 	sceGxmShaderPatcherReleaseVertexProgram(gContext->shaderPatcher->shaderPatcher, colorVertexProgram);
 
-	FreeFragmentPrograms(fragmentProgramsList.blend_mode_normal);
-	FreeFragmentPrograms(fragmentProgramsList.blend_mode_add);
+	FreeFragmentPrograms(&fragmentProgramsList.blend_mode_normal);
+	FreeFragmentPrograms(&fragmentProgramsList.blend_mode_add);
 
 	graphics::MemoryPool::FreeMemBlock(graphics::MemoryPool::MemoryType_UserNC, linearIndicesMem);
 
 	// unregister programs and destroy shader patcher
 	sceGxmShaderPatcherUnregisterProgram(gContext->shaderPatcher->shaderPatcher, colorFragmentProgramId);
 	sceGxmShaderPatcherUnregisterProgram(gContext->shaderPatcher->shaderPatcher, colorVertexProgramId);
+	//sceGxmShaderPatcherUnregisterProgram(gContext->shaderPatcher->shaderPatcher, textureFragmentProgramId);
+	sceGxmShaderPatcherUnregisterProgram(gContext->shaderPatcher->shaderPatcher, textureTintFragmentProgramId);
+	sceGxmShaderPatcherUnregisterProgram(gContext->shaderPatcher->shaderPatcher, textureVertexProgramId);
 
 	graphics::MemoryPool::FreeMemBlock(graphics::MemoryPool::MemoryType_UserNC, poolMem);
 }
 
-SceVoid vita2d::Core::FreeFragmentPrograms(SceGxmFragmentProgram *out)
+SceVoid vita2d::Core::FreeFragmentPrograms(FragmentProgram *out)
 {
 	SceInt32 err;
 
 	graphics::FwGraphicsContext *gContext = graphics::FwGraphicsContext::GetFwGraphicsContext();
 
-	err = sceGxmShaderPatcherReleaseFragmentProgram(gContext->shaderPatcher->shaderPatcher, out);
+	err = sceGxmShaderPatcherReleaseFragmentProgram(gContext->shaderPatcher->shaderPatcher, out->color);
+	if (err != SCE_OK)
+		sceClibPrintf("sceGxmShaderPatcherReleaseFragmentProgram(): 0x%X", err);
+
+	err = sceGxmShaderPatcherReleaseFragmentProgram(gContext->shaderPatcher->shaderPatcher, out->textureTint);
 	if (err != SCE_OK)
 		sceClibPrintf("sceGxmShaderPatcherReleaseFragmentProgram(): 0x%X", err);
 }
 
-SceVoid vita2d::Core::MakeFragmentPrograms(SceGxmFragmentProgram **out,
+SceVoid vita2d::Core::MakeFragmentPrograms(FragmentProgram *out,
 	const SceGxmBlendInfo *blend_info, SceGxmMultisampleMode msaa)
 {
 	SceInt32 err;
@@ -96,10 +109,22 @@ SceVoid vita2d::Core::MakeFragmentPrograms(SceGxmFragmentProgram **out,
 		msaa,
 		blend_info,
 		colorVertexProgramGxp,
-		out);
+		&out->color);
 
 	if (err != SCE_OK)
 		sceClibPrintf("color sceGxmShaderPatcherCreateFragmentProgram(): 0x%X", err);
+
+	err = sceGxmShaderPatcherCreateFragmentProgram(
+		gContext->shaderPatcher->shaderPatcher,
+		textureTintFragmentProgramId,
+		SCE_GXM_OUTPUT_REGISTER_FORMAT_UCHAR4,
+		msaa,
+		blend_info,
+		textureVertexProgramGxp,
+		&out->textureTint);
+
+	if (err != SCE_OK)
+		sceClibPrintf("texture_tint sceGxmShaderPatcherCreateFragmentProgram(): 0x%X", err);
 }
 
 SceVoid vita2d::Core::SetupShaders()
@@ -117,6 +142,21 @@ SceVoid vita2d::Core::SetupShaders()
 	err = sceGxmShaderPatcherRegisterProgram(gContext->shaderPatcher->shaderPatcher, colorFragmentProgramGxp, &colorFragmentProgramId);
 	if (err != SCE_OK) {
 		sceClibPrintf("color_f sceGxmShaderPatcherRegisterProgram(): 0x%X", err);
+	}
+
+	err = sceGxmShaderPatcherRegisterProgram(gContext->shaderPatcher->shaderPatcher, textureVertexProgramGxp, &textureVertexProgramId);
+	if (err != SCE_OK) {
+		sceClibPrintf("texture_v sceGxmShaderPatcherRegisterProgram(): 0x%X", err);
+	}
+
+	/*err = sceGxmShaderPatcherRegisterProgram(gContext->shaderPatcher->shaderPatcher, textureFragmentProgramGxp, &textureFragmentProgramId);
+	if (err != SCE_OK) {
+		sceClibPrintf("texture_f sceGxmShaderPatcherRegisterProgram(): 0x%X", err);
+	}*/
+
+	err = sceGxmShaderPatcherRegisterProgram(gContext->shaderPatcher->shaderPatcher, textureTintFragmentProgramGxp, &textureTintFragmentProgramId);
+	if (err != SCE_OK) {
+		sceClibPrintf("texture_tint_f sceGxmShaderPatcherRegisterProgram(): 0x%X", err);
 	}
 
 	// Fill SceGxmBlendInfo
@@ -189,6 +229,42 @@ SceVoid vita2d::Core::SetupShaders()
 		sceClibPrintf("color sceGxmShaderPatcherCreateVertexProgram(): 0x%X", err);
 	}
 
+	const SceGxmProgramParameter *paramTexturePositionAttribute = sceGxmProgramFindParameterByName(textureVertexProgramGxp, "aPosition");
+	const SceGxmProgramParameter *paramTextureTexcoordAttribute = sceGxmProgramFindParameterByName(textureVertexProgramGxp, "aTexcoord");
+
+	// create texture vertex format
+	SceGxmVertexAttribute textureVertexAttributes[2];
+	SceGxmVertexStream textureVertexStreams[1];
+	/* x,y,z: 3 float 32 bits */
+	textureVertexAttributes[0].streamIndex = 0;
+	textureVertexAttributes[0].offset = 0;
+	textureVertexAttributes[0].format = SCE_GXM_ATTRIBUTE_FORMAT_F32;
+	textureVertexAttributes[0].componentCount = 3; // (x, y, z)
+	textureVertexAttributes[0].regIndex = sceGxmProgramParameterGetResourceIndex(paramTexturePositionAttribute);
+	/* u,v: 2 floats 32 bits */
+	textureVertexAttributes[1].streamIndex = 0;
+	textureVertexAttributes[1].offset = 12; // (x, y, z) * 4 = 12 bytes
+	textureVertexAttributes[1].format = SCE_GXM_ATTRIBUTE_FORMAT_F32;
+	textureVertexAttributes[1].componentCount = 2; // (u, v)
+	textureVertexAttributes[1].regIndex = sceGxmProgramParameterGetResourceIndex(paramTextureTexcoordAttribute);
+	// 16 bit (short) indices
+	textureVertexStreams[0].stride = sizeof(TextureVertex);
+	textureVertexStreams[0].indexSource = SCE_GXM_INDEX_SOURCE_INDEX_16BIT;
+
+	// create texture shaders
+	err = sceGxmShaderPatcherCreateVertexProgram(
+		gContext->shaderPatcher->shaderPatcher,
+		textureVertexProgramId,
+		textureVertexAttributes,
+		2,
+		textureVertexStreams,
+		1,
+		&textureVertexProgram);
+
+	if (err != SCE_OK) {
+		sceClibPrintf("texture sceGxmShaderPatcherCreateVertexProgram(): 0x%X", err);
+	}
+
 	// Create variations of the fragment program based on blending mode
 	MakeFragmentPrograms(&fragmentProgramsList.blend_mode_normal, &blend_info, msaa);
 	MakeFragmentPrograms(&fragmentProgramsList.blend_mode_add, &blend_info_add, msaa);
@@ -198,6 +274,8 @@ SceVoid vita2d::Core::SetupShaders()
 
 	// find vertex uniforms by name and cache parameter information
 	colorWvpParam = sceGxmProgramFindParameterByName(colorVertexProgramGxp, "wvp");
+	textureWvpParam = sceGxmProgramFindParameterByName(textureVertexProgramGxp, "wvp");
+	textureTintColorParam = sceGxmProgramFindParameterByName(textureTintFragmentProgramGxp, "uTintColor");
 
 	// Allocate memory for the memory pool
 	poolMem = graphics::MemoryPool::AllocMemBlock(graphics::MemoryPool::MemoryType_UserNC, tempPoolSize, "vita2d::TempPool");
@@ -251,10 +329,12 @@ SceVoid vita2d::Core::PoolReset()
 
 SceVoid vita2d::Core::SetBlendModeAdd(SceBool enable)
 {
-	SceGxmFragmentProgram *in = enable ? fragmentProgramsList.blend_mode_add
-		: fragmentProgramsList.blend_mode_normal;
+	FragmentProgram *in = enable ? &fragmentProgramsList.blend_mode_add
+		: &fragmentProgramsList.blend_mode_normal;
 
-	colorFragmentProgram = in;
+	colorFragmentProgram = in->color;
+	textureFragmentProgram = in->texture;
+	textureTintFragmentProgram = in->textureTint;
 }
 
 SceInt32 vita2d::Core::CheckVersion(SceInt32 vita2d_version)

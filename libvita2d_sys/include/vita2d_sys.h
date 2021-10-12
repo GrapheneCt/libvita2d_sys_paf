@@ -10,6 +10,11 @@
 #include <vectormath.h>
 #include <scebase_common/scebase_target.h>
 
+#ifdef V2D_BUILD
+#include "int_htab.h"
+#include "bin_packing_2d.h"
+#endif
+
 #define VITA2D_SYS_VERSION_INTERNAL 0146
 
 #ifndef VITA2D_SYS_VERSION
@@ -82,33 +87,51 @@ namespace vita2d {
 
 		sce::Vectormath::Simd::Aos::Matrix4 orthoMatrix;
 		SceGxmVertexProgram *colorVertexProgram;
+		SceGxmVertexProgram *textureVertexProgram;
 		SceGxmFragmentProgram *colorFragmentProgram;
+		SceGxmFragmentProgram *textureFragmentProgram;
+		SceGxmFragmentProgram *textureTintFragmentProgram;
+
 		const SceGxmProgramParameter *colorWvpParam;
+		const SceGxmProgramParameter *textureTintColorParam;
+		const SceGxmProgramParameter *textureWvpParam;
 
 	private:
 
-		class FragmentPrograms
+		class FragmentProgram
 		{
 		public:
 
-			SceGxmFragmentProgram *blend_mode_normal;
-			SceGxmFragmentProgram *blend_mode_add;
+			SceGxmFragmentProgram *color;
+			SceGxmFragmentProgram *texture;
+			SceGxmFragmentProgram *textureTint;
+		};
+
+		class FragmentProgramListing
+		{
+		public:
+
+			FragmentProgram blend_mode_normal;
+			FragmentProgram blend_mode_add;
 		};
 
 		SceVoid SetupShaders();
 
-		SceVoid MakeFragmentPrograms(SceGxmFragmentProgram **out,
+		SceVoid MakeFragmentPrograms(FragmentProgram *out,
 			const SceGxmBlendInfo *blend_info, SceGxmMultisampleMode msaa);
 
-		SceVoid FreeFragmentPrograms(SceGxmFragmentProgram *out);
+		SceVoid FreeFragmentPrograms(FragmentProgram *out);
 
 		SceUInt32 tempPoolSize;
 		SceGxmMultisampleMode msaa;
 		SceUInt32 screenWidth;
 		SceUInt32 screenHeight;
+		FragmentProgramListing fragmentProgramsList;
 		SceGxmShaderPatcherId colorVertexProgramId;
 		SceGxmShaderPatcherId colorFragmentProgramId;
-		FragmentPrograms fragmentProgramsList;
+		SceGxmShaderPatcherId textureVertexProgramId;
+		SceGxmShaderPatcherId textureFragmentProgramId;
+		SceGxmShaderPatcherId textureTintFragmentProgramId;
 		ScePVoid linearIndicesMem;
 		ScePVoid poolMem;
 		SceUInt32 poolIndex;
@@ -146,6 +169,8 @@ namespace vita2d {
 
 		SceVoid Draw(SceFloat x, SceFloat y, SceFloat tex_x, SceFloat tex_y, SceFloat tex_w, SceFloat tex_h, SceFloat x_scale, SceFloat y_scale, SceUInt32 color);
 
+		SceGxmTexture gxmTex;
+
 	private:
 
 		static SceInt32 TexFormat2Bytespp(SceGxmTextureFormat format);
@@ -155,13 +180,61 @@ namespace vita2d {
 		ScePVoid dataMem;
 		ScePVoid paletteMem;
 		ScePVoid depthMem;
-		SceGxmTexture gxmTex;
 		SceGxmColorSurface gxmSfc;
 		SceGxmDepthStencilSurface gxmSfd;
 		SceGxmRenderTarget *gxmRtgt;
-		graphics::MemoryPool::MemoryType texHeapType;
+		paf::graphics::MemoryPool::MemoryType texHeapType;
 
 	};
+
+#ifdef V2D_BUILD
+
+	class TextureAtlas
+	{
+	public:
+
+		class EntryData
+		{
+		public:
+
+			int bitmap_left;
+			int bitmap_top;
+			int advance_x;
+			int advance_y;
+			int glyph_size;
+		};
+
+		class HtabEntry
+		{
+		public:
+
+			bp2d_rectangle rect;
+			EntryData data;
+		};
+
+		TextureAtlas(SceInt32 width, SceInt32 height, SceGxmTextureFormat format);
+
+		~TextureAtlas();
+
+		SceInt32 Insert(SceUInt32 character,
+			const bp2d_size *size,
+			const EntryData *data,
+			bp2d_position *inserted_pos);
+
+		SceBool Exists(SceUInt32 character);
+
+		SceInt32 Get(SceUInt32 character,
+			bp2d_rectangle *rect, EntryData *data);
+
+		Texture *texture;
+
+	private:
+
+		bp2d_node *bpRoot;
+		int_htab *htab;
+	};
+
+#endif
 
 	class Pvf
 	{
@@ -208,10 +281,18 @@ namespace vita2d {
 			SceInt32 x, SceInt32 y, SceUInt32 color, SceFloat scale,
 			const char *text);
 
+		SceInt32 AtlasAddGlyph(SceUInt32 character);
+
+		SceInt32 Utf8ToUcs2(const char *utf8, SceUInt32 *character);
+
 		ScePvf_t_libId libHandle;
 		ScePvf_t_fontId fontHandle;
-		texture_atlas *atlas;
-		paf::thread::Mutex *mutex;
+#ifdef V2D_BUILD
+		TextureAtlas *atlas;
+#else
+		ScePVoid atlas;
+#endif
+		paf::thread::Mutex2 *mutex;
 		SceFloat vsize;
 		SceFloat prLinespace;
 		SceFloat prCharspace;

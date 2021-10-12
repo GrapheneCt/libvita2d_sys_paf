@@ -1,62 +1,45 @@
 #include <kernel.h>
 #include <paf.h>
 
-#include "texture_atlas.h"
+#include "vita2d_sys.h"
 #include "int_htab.h"
 
-texture_atlas *texture_atlas_create(int width, int height, SceGxmTextureFormat format)
-{
-	texture_atlas *atlas = sce_paf_malloc(sizeof(texture_atlas));
-	if (!atlas) {
-		sceClibPrintf("[ATLAS] sce_paf_malloc() returned NULL");
-		return NULL;
-	}
 
+vita2d::TextureAtlas::TextureAtlas(SceInt32 width, SceInt32 height, SceGxmTextureFormat format)
+{
 	bp2d_rectangle rect;
 	rect.x = 0;
 	rect.y = 0;
 	rect.w = width;
 	rect.h = height;
 
-	atlas->texture = vita2d_create_empty_texture_format(width,
-							    height,
-							    format);
-	if (!atlas->texture) {
-		SCE_DBG_LOG_ERROR("[ATLAS] vita2d_create_empty_texture_format() returned NULL");
-		heap_free_heap_memory(vita2d_heap_internal, atlas);
-		return NULL;
-	}
+	texture = new Texture(width, height, format);
 
-	atlas->bp_root = bp2d_create(&rect);
-	atlas->htab = int_htab_create(256);
+	bpRoot = bp2d_create(&rect);
+	htab = int_htab_create(256);
 
-	vita2d_texture_set_filters(atlas->texture,
-				   SCE_GXM_TEXTURE_FILTER_POINT,
-				   SCE_GXM_TEXTURE_FILTER_LINEAR);
-
-	return atlas;
+	texture->SetFilters(SCE_GXM_TEXTURE_FILTER_POINT, SCE_GXM_TEXTURE_FILTER_LINEAR);
 }
 
-void texture_atlas_free(texture_atlas *atlas)
+vita2d::TextureAtlas::~TextureAtlas()
 {
-	vita2d_free_texture(atlas->texture);
-	bp2d_free(atlas->bp_root);
-	int_htab_free(atlas->htab);
-	heap_free_heap_memory(vita2d_heap_internal, atlas);
+	delete texture;
+	bp2d_free(bpRoot);
+	int_htab_free(htab);
 }
 
-int texture_atlas_insert(texture_atlas *atlas, unsigned int character,
-			 const bp2d_size *size,
-			 const texture_atlas_entry_data *data,
-			 bp2d_position *inserted_pos)
+SceInt32 vita2d::TextureAtlas::Insert(SceUInt32 character,
+	const bp2d_size *size,
+	const EntryData *data,
+	bp2d_position *inserted_pos)
 {
-	atlas_htab_entry *entry;
+	HtabEntry *entry;
 	bp2d_node *new_node;
 
-	if (!bp2d_insert(atlas->bp_root, size, inserted_pos, &new_node))
+	if (!bp2d_insert(bpRoot, size, inserted_pos, &new_node))
 		return 0;
 
-	entry = heap_alloc_heap_memory(vita2d_heap_internal, sizeof(*entry));
+	entry = new HtabEntry();
 
 	entry->rect.x = inserted_pos->x;
 	entry->rect.y = inserted_pos->y;
@@ -64,23 +47,23 @@ int texture_atlas_insert(texture_atlas *atlas, unsigned int character,
 	entry->rect.h = size->h;
 	entry->data = *data;
 
-	if (!int_htab_insert(atlas->htab, character, entry)) {
-		bp2d_delete(atlas->bp_root, new_node);
+	if (!int_htab_insert(htab, character, entry)) {
+		bp2d_delete(bpRoot, new_node);
 		return 0;
 	}
 
 	return 1;
 }
 
-int texture_atlas_exists(texture_atlas *atlas, unsigned int character)
+SceBool vita2d::TextureAtlas::Exists(SceUInt32 character)
 {
-	return int_htab_find(atlas->htab, character) != NULL;
+	return int_htab_find(htab, character) != NULL;
 }
 
-int texture_atlas_get(texture_atlas *atlas, unsigned int character,
-		      bp2d_rectangle *rect, texture_atlas_entry_data *data)
+SceInt32 vita2d::TextureAtlas::Get(SceUInt32 character,
+	bp2d_rectangle *rect, EntryData *data)
 {
-	atlas_htab_entry *entry = int_htab_find(atlas->htab, character);
+	HtabEntry *entry = (HtabEntry *)int_htab_find(htab, character);
 	if (!entry)
 		return 0;
 

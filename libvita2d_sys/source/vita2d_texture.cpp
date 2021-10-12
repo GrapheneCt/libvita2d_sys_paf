@@ -10,7 +10,7 @@
 using namespace paf;
 
 #define GXM_TEX_MAX_SIZE 4096
-static graphics::MemoryPool::MemoryType heapType = graphics::MemoryPool::MemoryType::MemoryType_UserNC;
+static graphics::MemoryPool::MemoryType heapType = (graphics::MemoryPool::MemoryType)(0);
 
 SceInt32 vita2d::Texture::TexFormat2Bytespp(SceGxmTextureFormat format)
 {

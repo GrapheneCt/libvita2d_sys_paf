@@ -64,19 +64,16 @@
     <ClInclude Include="include\bin_packing_2d.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\texture_atlas.h">
+    <ClInclude Include="include\int_htab.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\int_htab.h">
+    <ClInclude Include="include\utils.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="source\utils.cpp">
       <Filter>Source Files</Filter>
-    </None>
-    <None Include="include\utils.h">
-      <Filter>Header Files</Filter>
     </None>
   </ItemGroup>
 </Project>
