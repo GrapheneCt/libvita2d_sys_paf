@@ -37,9 +37,6 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="include\vita2d_sys.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="include\shader\compiled\clear_f_gxp.h">
       <Filter>Header Files\shader</Filter>
     </ClInclude>
@@ -68,6 +65,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\utils.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\vita2d_sys_paf.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

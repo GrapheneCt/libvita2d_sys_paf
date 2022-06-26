@@ -2,7 +2,7 @@
 #include <sceconst.h>
 #include <paf.h>
 
-#include "vita2d_sys.h"
+#include "vita2d_sys_paf.h"
 
 using namespace paf;
 using namespace vita2d;
@@ -10,7 +10,7 @@ using namespace vita2d;
 SceVoid vita2d::SimpleDraw::Pixel(SceFloat x, SceFloat y, SceUInt32 color)
 {
 	Core *core = Core::GetCurrentCore();
-	graphics::FwGraphicsContext *gContext = graphics::FwGraphicsContext::GetFwGraphicsContext();
+	graph::GraphicsContext *gContext = graph::GraphicsContext::GetGraphicsContext();
 
 	Core::ColorVertex *vertex = (Core::ColorVertex *)core->PoolMemalign(
 		1 * sizeof(Core::ColorVertex), // 1 vertex
@@ -43,7 +43,7 @@ SceVoid vita2d::SimpleDraw::Pixel(SceFloat x, SceFloat y, SceUInt32 color)
 SceVoid vita2d::SimpleDraw::Line(SceFloat x0, SceFloat y0, SceFloat x1, SceFloat y1, SceUInt32 color)
 {
 	Core *core = Core::GetCurrentCore();
-	graphics::FwGraphicsContext *gContext = graphics::FwGraphicsContext::GetFwGraphicsContext();
+	graph::GraphicsContext *gContext = graph::GraphicsContext::GetGraphicsContext();
 
 	Core::ColorVertex *vertices = (Core::ColorVertex *)core->PoolMemalign(
 		2 * sizeof(Core::ColorVertex), // 2 vertices
@@ -75,7 +75,7 @@ SceVoid vita2d::SimpleDraw::Line(SceFloat x0, SceFloat y0, SceFloat x1, SceFloat
 SceVoid vita2d::SimpleDraw::Rectangle(SceFloat x, SceFloat y, SceFloat w, SceFloat h, SceUInt32 color)
 {
 	Core *core = Core::GetCurrentCore();
-	graphics::FwGraphicsContext *gContext = graphics::FwGraphicsContext::GetFwGraphicsContext();
+	graph::GraphicsContext *gContext = graph::GraphicsContext::GetGraphicsContext();
 
 	Core::ColorVertex *vertices = (Core::ColorVertex *)core->PoolMemalign(
 		4 * sizeof(Core::ColorVertex), // 4 vertices
@@ -115,7 +115,7 @@ SceVoid vita2d::SimpleDraw::Rectangle(SceFloat x, SceFloat y, SceFloat w, SceFlo
 SceVoid vita2d::SimpleDraw::Circle(SceFloat x, SceFloat y, SceFloat radius, SceUInt32 color)
 {
 	Core *core = Core::GetCurrentCore();
-	graphics::FwGraphicsContext *gContext = graphics::FwGraphicsContext::GetFwGraphicsContext();
+	graph::GraphicsContext *gContext = graph::GraphicsContext::GetGraphicsContext();
 
 	static const SceInt32 num_segments = 100;
 
@@ -170,7 +170,7 @@ SceVoid vita2d::SimpleDraw::Circle(SceFloat x, SceFloat y, SceFloat radius, SceU
 SceVoid vita2d::SimpleDraw::Array(SceGxmPrimitiveType mode, const Core::ColorVertex *vertices, SceSize count)
 {
 	Core *core = Core::GetCurrentCore();
-	graphics::FwGraphicsContext *gContext = graphics::FwGraphicsContext::GetFwGraphicsContext();
+	graph::GraphicsContext *gContext = graph::GraphicsContext::GetGraphicsContext();
 
 	sceGxmSetVertexProgram(gContext->gxmContext, core->colorVertexProgram);
 	sceGxmSetFragmentProgram(gContext->gxmContext, core->colorFragmentProgram);

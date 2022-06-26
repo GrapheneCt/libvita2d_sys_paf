@@ -1,7 +1,7 @@
 #include <kernel.h>
 #include <paf.h>
 
-#include "vita2d_sys.h"
+#include "vita2d_sys_paf.h"
 #include "int_htab.h"
 
 

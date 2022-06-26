@@ -138,19 +138,17 @@ namespace vita2d {
 	};
 
 
-	class SimpleDraw
+	namespace draw
 	{
-	public:
+		SceVoid Pixel(SceFloat x, SceFloat y, SceUInt32 color);
 
-		static SceVoid Pixel(SceFloat x, SceFloat y, SceUInt32 color);
+		SceVoid Line(SceFloat x0, SceFloat y0, SceFloat x1, SceFloat y1, SceUInt32 color);
 
-		static SceVoid Line(SceFloat x0, SceFloat y0, SceFloat x1, SceFloat y1, SceUInt32 color);
-
-		static SceVoid Rectangle(SceFloat x, SceFloat y, SceFloat w, SceFloat h, SceUInt32 color);
+		SceVoid Rectangle(SceFloat x, SceFloat y, SceFloat w, SceFloat h, SceUInt32 color);
 		
-		static SceVoid Circle(SceFloat x, SceFloat y, SceFloat radius, SceUInt32 color);
+		SceVoid Circle(SceFloat x, SceFloat y, SceFloat radius, SceUInt32 color);
 
-		static SceVoid Array(SceGxmPrimitiveType mode, const Core::ColorVertex *vertices, SceSize count);
+		SceVoid Array(SceGxmPrimitiveType mode, const Core::ColorVertex *vertices, SceSize count);
 	};
 
 	class Texture
@@ -161,9 +159,9 @@ namespace vita2d {
 
 		~Texture();
 
-		static SceVoid SetHeapType(paf::graphics::MemoryPool::MemoryType type);
+		static SceVoid SetHeapType(paf::graph::SurfacePool::MemoryType type);
 
-		static paf::graphics::MemoryPool::MemoryType GetHeapType();
+		static paf::graph::SurfacePool::MemoryType GetHeapType();
 
 		SceVoid SetFilters(SceGxmTextureFilter min_filter, SceGxmTextureFilter mag_filter);
 
@@ -183,7 +181,7 @@ namespace vita2d {
 		SceGxmColorSurface gxmSfc;
 		SceGxmDepthStencilSurface gxmSfd;
 		SceGxmRenderTarget *gxmRtgt;
-		paf::graphics::MemoryPool::MemoryType texHeapType;
+		paf::graph::SurfacePool::MemoryType texHeapType;
 
 	};
 
@@ -246,6 +244,16 @@ namespace vita2d {
 
 		~Pvf();
 
+		static ScePvf_t_fontId GetDefaultLatinFont();
+
+		static ScePvf_t_fontId GetDefaultJapaneseFont();
+
+		static ScePvf_t_libId GetLibId();
+
+		static SceVoid SetDefaultLatinFont(ScePvf_t_fontId font);
+
+		static SceVoid SetDefaultJapaneseFont(ScePvf_t_fontId font);
+
 		SceInt32 Draw(SceInt32 x, SceInt32 y,
 			SceUInt32 color, SceFloat scale,
 			const char *text);
@@ -292,7 +300,7 @@ namespace vita2d {
 #else
 		ScePVoid atlas;
 #endif
-		paf::thread::Mutex2 *mutex;
+		paf::thread::Mutex *mutex;
 		SceFloat vsize;
 		SceFloat prLinespace;
 		SceFloat prCharspace;

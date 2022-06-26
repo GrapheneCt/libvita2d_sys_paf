@@ -86,7 +86,7 @@
     <ClInclude Include="include\shader\compiled\texture_tint_f_gxp.h" />
     <ClInclude Include="include\shader\compiled\texture_v_gxp.h" />
     <ClInclude Include="include\utils.h" />
-    <ClInclude Include="include\vita2d_sys.h" />
+    <ClInclude Include="include\vita2d_sys_paf.h" />
   </ItemGroup>
   <Import Condition="'$(ConfigurationType)' == 'Makefile' and Exists('$(VCTargetsPath)\Platforms\$(Platform)\SCE.Makefile.$(Platform).targets')" Project="$(VCTargetsPath)\Platforms\$(Platform)\SCE.Makefile.$(Platform).targets" />
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

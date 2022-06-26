@@ -4,13 +4,13 @@
 #include <appmgr.h>
 #include <paf.h>
 
-#include "vita2d_sys.h"
+#include "vita2d_sys_paf.h"
 #include "utils.h"
 
 using namespace paf;
 
 #define GXM_TEX_MAX_SIZE 4096
-static graphics::MemoryPool::MemoryType heapType = (graphics::MemoryPool::MemoryType)(0);
+static graph::SurfacePool::MemoryType heapType = (graph::SurfacePool::MemoryType)(0);
 
 SceInt32 vita2d::Texture::TexFormat2Bytespp(SceGxmTextureFormat format)
 {
@@ -40,12 +40,12 @@ SceInt32 vita2d::Texture::TexFormat2Bytespp(SceGxmTextureFormat format)
 	}
 }
 
-SceVoid vita2d::Texture::SetHeapType(graphics::MemoryPool::MemoryType type)
+SceVoid vita2d::Texture::SetHeapType(graph::SurfacePool::MemoryType type)
 {
 		heapType = type;
 }
 
-graphics::MemoryPool::MemoryType vita2d::Texture::GetHeapType()
+graph::SurfacePool::MemoryType vita2d::Texture::GetHeapType()
 {
 	return heapType;
 }
@@ -64,7 +64,7 @@ vita2d::Texture::Texture(SceUInt32 w, SceUInt32 h, SceGxmTextureFormat format, S
 
 	/* Allocate a GPU buffer for the texture */
 
-	dataMem = graphics::MemoryPool::AllocMemBlock(heapType, tex_size, "vita2d::TextureMemory");
+	dataMem = graph::SurfacePool::AllocSurfaceMemory(heapType, tex_size, "vita2d::TextureMemory");
 
 	if (dataMem == SCE_NULL) {
 		sceClibPrintf("[TEX] graphics::MemoryPool::AllocMemBlock() returned NULL");
@@ -89,7 +89,7 @@ vita2d::Texture::Texture(SceUInt32 w, SceUInt32 h, SceGxmTextureFormat format, S
 
 		const SceUInt32 pal_size = 256 * sizeof(SceUInt32);
 
-		paletteMem = graphics::MemoryPool::AllocMemBlock(heapType, pal_size, "vita2d::TexturePaletteMemory");
+		paletteMem = graph::SurfacePool::AllocSurfaceMemory(heapType, pal_size, "vita2d::TexturePaletteMemory");
 
 		if (paletteMem == SCE_NULL) {
 			sceClibPrintf("[TEX] graphics::MemoryPool::AllocMemBlock() returned NULL");
@@ -128,7 +128,7 @@ vita2d::Texture::Texture(SceUInt32 w, SceUInt32 h, SceGxmTextureFormat format, S
 		SceUInt32 depthStrideInSamples = alignedWidth;
 
 		// allocate it
-		depthMem = graphics::MemoryPool::AllocMemBlock(heapType, 4 * sampleCount, "vita2d::TextureDepthMemory");
+		depthMem = graph::SurfacePool::AllocSurfaceMemory(heapType, 4 * sampleCount, "vita2d::TextureDepthMemory");
 
 		// create the SceGxmDepthStencilSurface structure
 		ret = sceGxmDepthStencilSurfaceInit(
@@ -178,13 +178,13 @@ vita2d::Texture::~Texture()
 		sceGxmDestroyRenderTarget(gxmRtgt);
 	}
 	if (depthMem) {
-		graphics::MemoryPool::FreeMemBlock(texHeapType, depthMem);
+		graph::SurfacePool::FreeSurfaceMemory(texHeapType, depthMem);
 	}
 	if (paletteMem) {
-		graphics::MemoryPool::FreeMemBlock(texHeapType, paletteMem);
+		graph::SurfacePool::FreeSurfaceMemory(texHeapType, paletteMem);
 	}
 	if (dataMem) {
-		graphics::MemoryPool::FreeMemBlock(texHeapType, dataMem);
+		graph::SurfacePool::FreeSurfaceMemory(texHeapType, dataMem);
 	}
 }
 
@@ -196,7 +196,7 @@ SceVoid vita2d::Texture::SetFilters(SceGxmTextureFilter min_filter, SceGxmTextur
 
 SceVoid vita2d::Texture::Draw(SceFloat x, SceFloat y, SceFloat tex_x, SceFloat tex_y, SceFloat tex_w, SceFloat tex_h, SceFloat x_scale, SceFloat y_scale)
 {
-	graphics::FwGraphicsContext *gContext = graphics::FwGraphicsContext::GetFwGraphicsContext();
+	graph::GraphicsContext *gContext = graph::GraphicsContext::GetGraphicsContext();
 	Core *core = Core::GetCurrentCore();
 
 	Core::TextureVertex *vertices = (Core::TextureVertex *)core->PoolMemalign(
@@ -247,7 +247,7 @@ SceVoid vita2d::Texture::Draw(SceFloat x, SceFloat y, SceFloat tex_x, SceFloat t
 
 SceVoid vita2d::Texture::Draw(SceFloat x, SceFloat y, SceFloat tex_x, SceFloat tex_y, SceFloat tex_w, SceFloat tex_h, SceFloat x_scale, SceFloat y_scale, SceUInt32 color)
 {
-	graphics::FwGraphicsContext *gContext = graphics::FwGraphicsContext::GetFwGraphicsContext();
+	graph::GraphicsContext *gContext = graph::GraphicsContext::GetGraphicsContext();
 	Core *core = Core::GetCurrentCore();
 
 	sceGxmSetVertexProgram(gContext->gxmContext, core->textureVertexProgram);

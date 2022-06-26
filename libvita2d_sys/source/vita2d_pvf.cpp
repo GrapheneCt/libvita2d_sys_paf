@@ -4,7 +4,7 @@
 #include <paf.h>
 #include <ces.h>
 
-#include "vita2d_sys.h"
+#include "vita2d_sys_paf.h"
 #include "bin_packing_2d.h"
 #include "utils.h"
 
@@ -31,15 +31,57 @@ SceInt32 vita2d::Pvf::Utf8ToUcs2(const char *utf8, SceUInt32 *character)
 	}
 }
 
+ScePvf_t_libId vita2d::Pvf::GetLibId()
+{
+	ScePVoid tempPtr = &ui::s_widget19999DA5;
+	return *(ScePvf_t_libId *)(tempPtr + 0x108);
+}
+
+ScePvf_t_fontId vita2d::Pvf::GetDefaultLatinFont()
+{
+	ScePVoid tempPtr = &ui::s_widget91871D2D;
+	return *(ScePvf_t_fontId *)(tempPtr + 0x1E3C);
+}
+
+ScePvf_t_fontId vita2d::Pvf::GetDefaultJapaneseFont()
+{
+	ScePVoid tempPtr = &ui::s_widget91871D2D;
+	return *(ScePvf_t_fontId *)(tempPtr + 0x1E0C);
+}
+
+SceVoid vita2d::Pvf::SetDefaultLatinFont(ScePvf_t_fontId font)
+{
+	ScePVoid tempPtr = &ui::s_widget91871D2D;
+	thread::Mutex *mutex = (thread::Mutex *)(tempPtr + 0x1F24);
+
+	mutex->Lock();
+
+	*(ScePvf_t_fontId *)(tempPtr + 0x1E3C) = font;
+
+	mutex->Unlock();
+}
+
+SceVoid vita2d::Pvf::SetDefaultJapaneseFont(ScePvf_t_fontId font)
+{
+	ScePVoid tempPtr = &ui::s_widget91871D2D;
+	thread::Mutex *mutex = (thread::Mutex *)(tempPtr + 0x1F24);
+
+	mutex->Lock();
+
+	*(ScePvf_t_fontId *)(tempPtr + 0x1E0C) = font;
+
+	mutex->Unlock();
+}
+
 vita2d::Pvf::Pvf(const char *path, SceFloat hSize, SceFloat vSize, ScePvfDataAccessMode accessMode)
 {
 	ScePvf_t_error error;
 	ScePvf_t_irect irectinfo;
-	ScePVoid tempPtr = &widget::Widget::s_widget19999DA5;
+	ScePVoid tempPtr = &ui::s_widget19999DA5;
 	libHandle = *(ScePvf_t_libId *)(tempPtr + 0x108);
 
-	tempPtr = &widget::Widget::s_widget91871D2D;
-	mutex = (thread::Mutex2 *)(tempPtr + 0x1F24);
+	tempPtr = &ui::s_widget91871D2D;
+	mutex = (thread::Mutex *)(tempPtr + 0x1F24);
 
 	vsize = 0.0f;
 	prLinespace = 0.0f;
@@ -64,11 +106,11 @@ vita2d::Pvf::Pvf(ScePVoid buf, SceSize bufSize, SceFloat hSize, SceFloat vSize)
 {
 	ScePvf_t_error error;
 	ScePvf_t_irect irectinfo;
-	ScePVoid tempPtr = &widget::Widget::s_widget19999DA5;
+	ScePVoid tempPtr = &ui::s_widget19999DA5;
 	libHandle = *(ScePvf_t_libId *)(tempPtr + 0x108);
 
-	tempPtr = &widget::Widget::s_widget91871D2D;
-	mutex = *(thread::Mutex2 **)(tempPtr + 0x1F24);
+	tempPtr = &ui::s_widget91871D2D;
+	mutex = *(thread::Mutex **)(tempPtr + 0x1F24);
 
 	vsize = 0.0f;
 	prLinespace = 0.0f;
@@ -145,7 +187,6 @@ SceInt32 vita2d::Pvf::Draw(SceBool draw, SceInt32 *height,
 	mutex->Lock();
 
 	SceInt32 i;
-	SceUInt32 len = 0;
 	SceUInt32 character;
 	bp2d_rectangle rect;
 	TextureAtlas::EntryData data;

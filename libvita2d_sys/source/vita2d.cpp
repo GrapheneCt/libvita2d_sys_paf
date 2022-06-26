@@ -9,7 +9,7 @@
 #include <vectormath.h>
 #include <paf.h>
 
-#include "vita2d_sys.h"
+#include "vita2d_sys_paf.h"
 #include "utils.h"
 
 /* Shader binaries */
@@ -61,14 +61,14 @@ vita2d::Core::~Core()
 {
 	s_currentCore = SCE_NULL;
 
-	graphics::FwGraphicsContext *gContext = graphics::FwGraphicsContext::GetFwGraphicsContext();
+	graph::GraphicsContext *gContext = graph::GraphicsContext::GetGraphicsContext();
 
 	sceGxmShaderPatcherReleaseVertexProgram(gContext->shaderPatcher->shaderPatcher, colorVertexProgram);
 
 	FreeFragmentPrograms(&fragmentProgramsList.blend_mode_normal);
 	FreeFragmentPrograms(&fragmentProgramsList.blend_mode_add);
 
-	graphics::MemoryPool::FreeMemBlock(graphics::MemoryPool::MemoryType_UserNC, linearIndicesMem);
+	graph::SurfacePool::FreeSurfaceMemory(graph::SurfacePool::MemoryType_UserNC, linearIndicesMem);
 
 	// unregister programs and destroy shader patcher
 	sceGxmShaderPatcherUnregisterProgram(gContext->shaderPatcher->shaderPatcher, colorFragmentProgramId);
@@ -77,14 +77,14 @@ vita2d::Core::~Core()
 	sceGxmShaderPatcherUnregisterProgram(gContext->shaderPatcher->shaderPatcher, textureTintFragmentProgramId);
 	sceGxmShaderPatcherUnregisterProgram(gContext->shaderPatcher->shaderPatcher, textureVertexProgramId);
 
-	graphics::MemoryPool::FreeMemBlock(graphics::MemoryPool::MemoryType_UserNC, poolMem);
+	graph::SurfacePool::FreeSurfaceMemory(graph::SurfacePool::MemoryType_UserNC, poolMem);
 }
 
 SceVoid vita2d::Core::FreeFragmentPrograms(FragmentProgram *out)
 {
 	SceInt32 err;
 
-	graphics::FwGraphicsContext *gContext = graphics::FwGraphicsContext::GetFwGraphicsContext();
+	graph::GraphicsContext *gContext = graph::GraphicsContext::GetGraphicsContext();
 
 	err = sceGxmShaderPatcherReleaseFragmentProgram(gContext->shaderPatcher->shaderPatcher, out->color);
 	if (err != SCE_OK)
@@ -100,7 +100,7 @@ SceVoid vita2d::Core::MakeFragmentPrograms(FragmentProgram *out,
 {
 	SceInt32 err;
 
-	graphics::FwGraphicsContext *gContext = graphics::FwGraphicsContext::GetFwGraphicsContext();
+	graph::GraphicsContext *gContext = graph::GraphicsContext::GetGraphicsContext();
 
 	err = sceGxmShaderPatcherCreateFragmentProgram(
 		gContext->shaderPatcher->shaderPatcher,
@@ -132,7 +132,7 @@ SceVoid vita2d::Core::SetupShaders()
 	SceInt32 err;
 	UNUSED(err);
 
-	graphics::FwGraphicsContext *gContext = graphics::FwGraphicsContext::GetFwGraphicsContext();
+	graph::GraphicsContext *gContext = graph::GraphicsContext::GetGraphicsContext();
 
 	err = sceGxmShaderPatcherRegisterProgram(gContext->shaderPatcher->shaderPatcher, colorVertexProgramGxp, &colorVertexProgramId);
 	if (err != SCE_OK) {
@@ -180,7 +180,7 @@ SceVoid vita2d::Core::SetupShaders()
 		.colorMask = SCE_GXM_COLOR_MASK_ALL
 	};
 
-	linearIndicesMem = graphics::MemoryPool::AllocMemBlock(graphics::MemoryPool::MemoryType_UserNC, UINT16_MAX * sizeof(SceUInt16), "vita2d::LinearIndices");
+	linearIndicesMem = graph::SurfacePool::AllocSurfaceMemory(graph::SurfacePool::MemoryType_UserNC, UINT16_MAX * sizeof(SceUInt16), "vita2d::LinearIndices");
 
 	if (linearIndicesMem == SCE_NULL) {
 		sceClibPrintf("graphics::MemoryPool::AllocMemBlock() returned NULL", err);
@@ -278,7 +278,7 @@ SceVoid vita2d::Core::SetupShaders()
 	textureTintColorParam = sceGxmProgramFindParameterByName(textureTintFragmentProgramGxp, "uTintColor");
 
 	// Allocate memory for the memory pool
-	poolMem = graphics::MemoryPool::AllocMemBlock(graphics::MemoryPool::MemoryType_UserNC, tempPoolSize, "vita2d::TempPool");
+	poolMem = graph::SurfacePool::AllocSurfaceMemory(graph::SurfacePool::MemoryType_UserNC, tempPoolSize, "vita2d::TempPool");
 
 	if (poolMem == SCE_NULL) {
 		sceClibPrintf("graphics::MemoryPool::AllocMemBlock() returned NULL", err);
